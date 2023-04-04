@@ -15,14 +15,11 @@
 //@HEADER
 
 #pragma once
-#include "dynamic_extent.hpp"
 
-#ifdef __cpp_lib_span
 #include <span>
-#endif
 #include <array>
-
 #include <cinttypes>
+#include <limits>
 
 namespace std {
 namespace experimental {
@@ -48,7 +45,7 @@ struct __compare_extent_compatible : std::integral_constant<bool,
 
 template <size_t... Extents, size_t... OtherExtents>
 static constexpr std::integral_constant<
-    bool, _MDSPAN_FOLD_AND(__compare_extent_compatible<Extents, OtherExtents>::value)>
+    bool, (__compare_extent_compatible<Extents, OtherExtents>::value && ...)>
 __check_compatible_extents(
     std::integral_constant<bool, true>,
     std::integer_sequence<size_t, Extents...>,
@@ -549,7 +546,7 @@ struct __make_dextents<
   using type = typename __make_dextents<
       IndexType, Rank - 1,
       ::std::experimental::extents<IndexType,
-                                   ::std::experimental::dynamic_extent,
+                                   dynamic_extent,
                                    ExtentsPack...>>::type;
 };
 
@@ -570,7 +567,7 @@ using dextents = typename detail::__make_dextents<IndexType, Rank>::type;
 template <class... IndexTypes>
 extents(IndexTypes...)
     -> extents<size_t,
-               size_t((IndexTypes(), ::std::experimental::dynamic_extent))...>;
+               size_t((IndexTypes(), dynamic_extent))...>;
 #endif
 
 // Helper type traits for identifying a class as extents.
