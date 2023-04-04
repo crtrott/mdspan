@@ -340,8 +340,7 @@ public:
                 "extents::index_type must be a signed or unsigned integer type");
 private:
   constexpr static rank_type m_rank = sizeof...(Extents);
-  constexpr static rank_type m_rank_dynamic =
-      _MDSPAN_FOLD_PLUS_RIGHT((Extents == dynamic_extent), /* + ... + */ 0);
+  constexpr static rank_type m_rank_dynamic = ((Extents == dynamic_extent) + ... + 0);
 
   // internal storage type using maybe_static_array
   using vals_t =
