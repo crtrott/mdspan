@@ -185,7 +185,7 @@ private:
     ((Values == dyn_tag) + ... + 0);
 
   // Dynamic values member
-  _MDSPAN_NO_UNIQUE_ADDRESS possibly_empty_array<TDynamic, m_size_dynamic>
+  [[no_unique_address]] possibly_empty_array<TDynamic, m_size_dynamic>
       m_dyn_vals;
 
   // static mapping of indices to the position in the dynamic values array
@@ -345,7 +345,7 @@ private:
   // internal storage type using maybe_static_array
   using vals_t =
       detail::maybe_static_array<IndexType, size_t, dynamic_extent, Extents...>;
-  _MDSPAN_NO_UNIQUE_ADDRESS vals_t m_vals;
+  [[no_unique_address]] vals_t m_vals;
 
 public:
   // [mdspan.extents.obs], observers of multidimensional index space
