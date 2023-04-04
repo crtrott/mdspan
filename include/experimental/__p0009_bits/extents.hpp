@@ -377,7 +377,7 @@ public:
     is_convertible_v<OtherIndexType, index_type> &&
     is_nothrow_constructible_v<index_type, OtherIndexType> &&
     (N == m_rank || N == m_rank_dynamic))
-  MDSPAN_CONDITIONAL_EXPLICIT(N != m_rank_dynamic)
+  explicit(N != m_rank_dynamic)
   constexpr extents(const array<OtherIndexType, N> &exts) noexcept
       : m_vals(std::move(exts)) {}
 
@@ -386,7 +386,7 @@ public:
     is_convertible_v<OtherIndexType, index_type> &&
     is_nothrow_constructible_v<index_type, OtherIndexType> &&
     (N == m_rank || N == m_rank_dynamic))
-  MDSPAN_CONDITIONAL_EXPLICIT(N != m_rank_dynamic)
+  explicit(N != m_rank_dynamic)
   constexpr extents(const span<OtherIndexType, N> &exts) noexcept
       : m_vals(std::move(exts)) {}
 
@@ -439,11 +439,8 @@ public:
                                                sizeof...(OtherExtents)>{},
                   std::integer_sequence<size_t, Extents...>{},
                   std::integer_sequence<size_t, OtherExtents...>{}))::value)
-  MDSPAN_CONDITIONAL_EXPLICIT((((Extents != dynamic_extent) &&
-                                (OtherExtents == dynamic_extent)) ||
-                               ...) ||
-                              (std::numeric_limits<index_type>::max() <
-                               std::numeric_limits<OtherIndexType>::max()))
+  explicit((((Extents != dynamic_extent) && (OtherExtents == dynamic_extent)) || ...) ||
+           (std::numeric_limits<index_type>::max() < std::numeric_limits<OtherIndexType>::max()))
   constexpr extents(const extents<OtherIndexType, OtherExtents...> &other) noexcept
       : m_vals(__construct_vals_from_extents(
             std::integral_constant<size_t, 0>(),
