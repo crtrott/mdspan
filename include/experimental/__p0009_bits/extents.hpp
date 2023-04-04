@@ -202,43 +202,41 @@ public:
 
   // constructor for all static values
   // TODO: add precondition check?
-  MDSPAN_TEMPLATE_REQUIRES(class... Vals,
-                           /* requires */ ((m_size_dynamic == 0) &&
-                                           (sizeof...(Vals) > 0)))
+  template<class... Vals>
+  requires ((m_size_dynamic == 0) &&
+            (sizeof...(Vals) > 0))
   constexpr maybe_static_array(Vals...) : m_dyn_vals{} {}
 
   // constructors from dynamic values only
-  MDSPAN_TEMPLATE_REQUIRES(class... DynVals,
-                           /* requires */ (sizeof...(DynVals) ==
-                                               m_size_dynamic &&
-                                           m_size_dynamic > 0))
+  template<class... DynVals>
+  requires (sizeof...(DynVals) == m_size_dynamic &&
+            m_size_dynamic > 0)
   constexpr maybe_static_array(DynVals... vals)
       : m_dyn_vals{static_cast<TDynamic>(vals)...} {}
 
 
-  MDSPAN_TEMPLATE_REQUIRES(class T, size_t N,
-                           /* requires */ (N == m_size_dynamic && N > 0))
+  template<class T, size_t N>
+  requires (N == m_size_dynamic && N > 0)
   constexpr maybe_static_array(const std::array<T, N> &vals) {
     for (size_t r = 0; r < N; r++)
       m_dyn_vals[r] = static_cast<TDynamic>(vals[r]);
   }
 
-  MDSPAN_TEMPLATE_REQUIRES(class T, size_t N,
-                           /* requires */ (N == m_size_dynamic && N == 0))
+  template<class T, size_t N>
+  requires (N == m_size_dynamic && N == 0)
   constexpr maybe_static_array(const std::array<T, N> &) : m_dyn_vals{} {}
 
-  MDSPAN_TEMPLATE_REQUIRES(class T, size_t N,
-                           /* requires */ (N == m_size_dynamic))
+  template<class T, size_t N>
+  requires (N == m_size_dynamic)
   constexpr maybe_static_array(const std::span<T, N> &vals) {
     for (size_t r = 0; r < N; r++)
       m_dyn_vals[r] = static_cast<TDynamic>(vals[r]);
   }
 
   // constructors from all values
-  MDSPAN_TEMPLATE_REQUIRES(class... DynVals,
-                           /* requires */ (sizeof...(DynVals) !=
-                                               m_size_dynamic &&
-                                           m_size_dynamic > 0))
+  template<class... DynVals>
+  requires (sizeof...(DynVals) != m_size_dynamic &&
+            m_size_dynamic > 0)
   constexpr maybe_static_array(DynVals... vals) {
     static_assert((sizeof...(DynVals) == m_size), "Invalid number of values.");
     TDynamic values[m_size]{static_cast<TDynamic>(vals)...};
@@ -256,9 +254,8 @@ public:
     }
   }
 
-  MDSPAN_TEMPLATE_REQUIRES(
-      class T, size_t N,
-      /* requires */ (N != m_size_dynamic && m_size_dynamic > 0))
+  template<class T, size_t N>
+  requires (N != m_size_dynamic && m_size_dynamic > 0)
   constexpr maybe_static_array(const std::array<T, N> &vals) {
     static_assert((N == m_size), "Invalid number of values.");
 // Precondition check
@@ -280,9 +277,8 @@ public:
     }
   }
 
-  MDSPAN_TEMPLATE_REQUIRES(
-      class T, size_t N,
-      /* requires */ (N != m_size_dynamic && m_size_dynamic > 0))
+  template<class T, size_t N>
+  requires (N != m_size_dynamic && m_size_dynamic > 0)
   constexpr maybe_static_array(const std::span<T, N> &vals) {
     static_assert((N == m_size) || (m_size == dynamic_extent));
 #ifdef _MDSPAN_DEBUG
@@ -367,33 +363,29 @@ public:
 
   // Construction from just dynamic or all values.
   // Precondition check is deferred to maybe_static_array constructor
-  MDSPAN_TEMPLATE_REQUIRES(
-      class... OtherIndexTypes,
-      /* requires */ (
-          (is_convertible_v<OtherIndexTypes, index_type> && ... ) &&
-          (is_nothrow_constructible_v<index_type, OtherIndexTypes> && ... ) &&
-          (sizeof...(OtherIndexTypes) == m_rank ||
-           sizeof...(OtherIndexTypes) == m_rank_dynamic)))
+  template<class... OtherIndexTypes>
+  requires (
+    (is_convertible_v<OtherIndexTypes, index_type> && ... ) &&
+    (is_nothrow_constructible_v<index_type, OtherIndexTypes> && ... ) &&
+    (sizeof...(OtherIndexTypes) == m_rank ||
+     sizeof...(OtherIndexTypes) == m_rank_dynamic))
   constexpr explicit extents(OtherIndexTypes... dynvals) noexcept
       : m_vals(static_cast<index_type>(dynvals)...) {}
 
-  MDSPAN_TEMPLATE_REQUIRES(
-      class OtherIndexType, size_t N,
-      /* requires */
-      (
-          is_convertible_v<OtherIndexType, index_type> &&
-          is_nothrow_constructible_v<index_type, OtherIndexType> &&
-          (N == m_rank || N == m_rank_dynamic)))
+  template<class OtherIndexType, size_t N>
+  requires (
+    is_convertible_v<OtherIndexType, index_type> &&
+    is_nothrow_constructible_v<index_type, OtherIndexType> &&
+    (N == m_rank || N == m_rank_dynamic))
   MDSPAN_CONDITIONAL_EXPLICIT(N != m_rank_dynamic)
   constexpr extents(const array<OtherIndexType, N> &exts) noexcept
       : m_vals(std::move(exts)) {}
 
-  MDSPAN_TEMPLATE_REQUIRES(
-      class OtherIndexType, size_t N,
-      /* requires */
-      ( is_convertible_v<OtherIndexType, index_type> &&
-        is_nothrow_constructible_v<index_type, OtherIndexType> &&
-       (N == m_rank || N == m_rank_dynamic)))
+  template<class OtherIndexType, size_t N>
+  requires (
+    is_convertible_v<OtherIndexType, index_type> &&
+    is_nothrow_constructible_v<index_type, OtherIndexType> &&
+    (N == m_rank || N == m_rank_dynamic))
   MDSPAN_CONDITIONAL_EXPLICIT(N != m_rank_dynamic)
   constexpr extents(const span<OtherIndexType, N> &exts) noexcept
       : m_vals(std::move(exts)) {}
@@ -403,9 +395,8 @@ private:
   // With C++ 17 the first two variants could be collapsed using if constexpr
   // in which case you don't need all the requires clauses.
   // in C++ 14 mode that doesn't work due to infinite recursion
-  MDSPAN_TEMPLATE_REQUIRES(
-      size_t DynCount, size_t R, class OtherExtents, class... DynamicValues,
-      /* requires */ ((R < m_rank) && (static_extent(R) == dynamic_extent)))
+  template<size_t DynCount, size_t R, class OtherExtents, class... DynamicValues>
+  requires ((R < m_rank) && (static_extent(R) == dynamic_extent))
   vals_t __construct_vals_from_extents(std::integral_constant<size_t, DynCount>,
                                        std::integral_constant<size_t, R>,
                                        const OtherExtents &exts,
@@ -416,9 +407,8 @@ private:
         exts.extent(R));
   }
 
-  MDSPAN_TEMPLATE_REQUIRES(
-      size_t DynCount, size_t R, class OtherExtents, class... DynamicValues,
-      /* requires */ ((R < m_rank) && (static_extent(R) != dynamic_extent)))
+  template<size_t DynCount, size_t R, class OtherExtents, class... DynamicValues>
+  requires ((R < m_rank) && (static_extent(R) != dynamic_extent))
   vals_t __construct_vals_from_extents(std::integral_constant<size_t, DynCount>,
                                        std::integral_constant<size_t, R>,
                                        const OtherExtents &exts,
@@ -428,9 +418,8 @@ private:
         std::integral_constant<size_t, R + 1>(), exts, dynamic_values...);
   }
 
-  MDSPAN_TEMPLATE_REQUIRES(
-      size_t DynCount, size_t R, class OtherExtents, class... DynamicValues,
-      /* requires */ ((R == m_rank) && (DynCount == m_rank_dynamic)))
+  template<size_t DynCount, size_t R, class OtherExtents, class... DynamicValues>
+  requires ((R == m_rank) && (DynCount == m_rank_dynamic))
   vals_t __construct_vals_from_extents(std::integral_constant<size_t, DynCount>,
                                        std::integral_constant<size_t, R>,
                                        const OtherExtents &,
@@ -441,17 +430,15 @@ private:
 public:
 
   // Converting constructor from other extents specializations
-  MDSPAN_TEMPLATE_REQUIRES(
-      class OtherIndexType, size_t... OtherExtents,
-      /* requires */
-      (
-          /* multi-stage check to protect from invalid pack expansion when sizes
-             don't match? */
-          decltype(detail::__check_compatible_extents(
-              std::integral_constant<bool, sizeof...(Extents) ==
+  template<class OtherIndexType, size_t... OtherExtents>
+  requires (
+    /* multi-stage check to protect from invalid pack expansion when sizes
+       don't match? */
+    decltype(detail::__check_compatible_extents(
+                  std::integral_constant<bool, sizeof...(Extents) ==
                                                sizeof...(OtherExtents)>{},
-              std::integer_sequence<size_t, Extents...>{},
-              std::integer_sequence<size_t, OtherExtents...>{}))::value))
+                  std::integer_sequence<size_t, Extents...>{},
+                  std::integer_sequence<size_t, OtherExtents...>{}))::value)
   MDSPAN_CONDITIONAL_EXPLICIT((((Extents != dynamic_extent) &&
                                 (OtherExtents == dynamic_extent)) ||
                                ...) ||
