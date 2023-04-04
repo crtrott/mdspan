@@ -65,14 +65,13 @@ template <size_t R, class T, T... Extents> struct static_array_impl;
 
 template <size_t R, class T, T FirstExt, T... Extents>
 struct static_array_impl<R, T, FirstExt, Extents...> {
-  MDSPAN_INLINE_FUNCTION
   constexpr static T get(size_t r) {
     if (r == R)
       return FirstExt;
     else
       return static_array_impl<R + 1, T, Extents...>::get(r);
   }
-  template <size_t r> MDSPAN_INLINE_FUNCTION constexpr static T get() {
+  template <size_t r> constexpr static T get() {
     if constexpr (r == R)
       return FirstExt;
     else
@@ -83,18 +82,16 @@ struct static_array_impl<R, T, FirstExt, Extents...> {
 // End the recursion
 template <size_t R, class T, T FirstExt>
 struct static_array_impl<R, T, FirstExt> {
-  MDSPAN_INLINE_FUNCTION
   constexpr static T get(size_t) { return FirstExt; }
-  template <size_t> MDSPAN_INLINE_FUNCTION constexpr static T get() {
+  template <size_t> constexpr static T get() {
     return FirstExt;
   }
 };
 
 // Don't start recursion if size 0
 template <class T> struct static_array_impl<0, T> {
-  MDSPAN_INLINE_FUNCTION
   constexpr static T get(size_t) { return T(); }
-  template <size_t> MDSPAN_INLINE_FUNCTION constexpr static T get() {
+  template <size_t> constexpr static T get() {
     return T();
   }
 };
@@ -106,7 +103,6 @@ template <class T, T... Values> struct static_array:
 public:
   using value_type = T;
 
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t size() { return sizeof...(Values); }
 };
 
@@ -123,7 +119,6 @@ template <size_t R, size_t... Values> struct index_sequence_scan_impl;
 
 template <size_t R, size_t FirstVal, size_t... Values>
 struct index_sequence_scan_impl<R, FirstVal, Values...> {
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t get(size_t r) {
     if (r > R)
       return FirstVal + index_sequence_scan_impl<R + 1, Values...>::get(r);
@@ -137,17 +132,14 @@ struct index_sequence_scan_impl<R, FirstVal> {
 #if defined(__NVCC__) || defined(__NVCOMPILER)
   // NVCC warns about pointless comparison with 0 for R==0 and r being const
   // evaluatable and also 0.
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t get(size_t r) {
     return static_cast<int64_t>(R) > static_cast<int64_t>(r) ? FirstVal : 0;
   }
 #else
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t get(size_t r) { return R > r ? FirstVal : 0; }
 #endif
 };
 template <> struct index_sequence_scan_impl<0> {
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t get(size_t) { return 0; }
 };
 
@@ -162,16 +154,12 @@ template <> struct index_sequence_scan_impl<0> {
 
 template <class T, size_t N> struct possibly_empty_array {
   T vals[N];
-  MDSPAN_INLINE_FUNCTION
   constexpr T &operator[](size_t r) { return vals[r]; }
-  MDSPAN_INLINE_FUNCTION
   constexpr const T &operator[](size_t r) const { return vals[r]; }
 };
 
 template <class T> struct possibly_empty_array<T, 0> {
-  MDSPAN_INLINE_FUNCTION
   constexpr T operator[](size_t) { return T(); }
-  MDSPAN_INLINE_FUNCTION
   constexpr const T operator[](size_t) const { return T(); }
 };
 
@@ -217,7 +205,6 @@ public:
   MDSPAN_TEMPLATE_REQUIRES(class... Vals,
                            /* requires */ ((m_size_dynamic == 0) &&
                                            (sizeof...(Vals) > 0)))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(Vals...) : m_dyn_vals{} {}
 
   // constructors from dynamic values only
@@ -225,14 +212,12 @@ public:
                            /* requires */ (sizeof...(DynVals) ==
                                                m_size_dynamic &&
                                            m_size_dynamic > 0))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(DynVals... vals)
       : m_dyn_vals{static_cast<TDynamic>(vals)...} {}
 
 
   MDSPAN_TEMPLATE_REQUIRES(class T, size_t N,
                            /* requires */ (N == m_size_dynamic && N > 0))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(const std::array<T, N> &vals) {
     for (size_t r = 0; r < N; r++)
       m_dyn_vals[r] = static_cast<TDynamic>(vals[r]);
@@ -240,12 +225,10 @@ public:
 
   MDSPAN_TEMPLATE_REQUIRES(class T, size_t N,
                            /* requires */ (N == m_size_dynamic && N == 0))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(const std::array<T, N> &) : m_dyn_vals{} {}
 
   MDSPAN_TEMPLATE_REQUIRES(class T, size_t N,
                            /* requires */ (N == m_size_dynamic))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(const std::span<T, N> &vals) {
     for (size_t r = 0; r < N; r++)
       m_dyn_vals[r] = static_cast<TDynamic>(vals[r]);
@@ -256,7 +239,6 @@ public:
                            /* requires */ (sizeof...(DynVals) !=
                                                m_size_dynamic &&
                                            m_size_dynamic > 0))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(DynVals... vals) {
     static_assert((sizeof...(DynVals) == m_size), "Invalid number of values.");
     TDynamic values[m_size]{static_cast<TDynamic>(vals)...};
@@ -277,7 +259,6 @@ public:
   MDSPAN_TEMPLATE_REQUIRES(
       class T, size_t N,
       /* requires */ (N != m_size_dynamic && m_size_dynamic > 0))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(const std::array<T, N> &vals) {
     static_assert((N == m_size), "Invalid number of values.");
 // Precondition check
@@ -302,7 +283,6 @@ public:
   MDSPAN_TEMPLATE_REQUIRES(
       class T, size_t N,
       /* requires */ (N != m_size_dynamic && m_size_dynamic > 0))
-  MDSPAN_INLINE_FUNCTION
   constexpr maybe_static_array(const std::span<T, N> &vals) {
     static_assert((N == m_size) || (m_size == dynamic_extent));
 #ifdef _MDSPAN_DEBUG
@@ -323,23 +303,18 @@ public:
   }
 
   // access functions
-  MDSPAN_INLINE_FUNCTION
   constexpr static TStatic static_value(size_t r) { return static_vals_t::get(r); }
 
-  MDSPAN_INLINE_FUNCTION
   constexpr TDynamic value(size_t r) const {
     TStatic static_val = static_vals_t::get(r);
     return static_val == dyn_tag ? m_dyn_vals[dyn_map_t::get(r)]
                                         : static_cast<TDynamic>(static_val);
   }
-  MDSPAN_INLINE_FUNCTION
   constexpr TDynamic operator[](size_t r) const { return value(r); }
 
 
   // observers
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t size() { return m_size; }
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t size_dynamic() { return m_size_dynamic; }
 };
 
@@ -379,20 +354,15 @@ private:
 
 public:
   // [mdspan.extents.obs], observers of multidimensional index space
-  MDSPAN_INLINE_FUNCTION
   constexpr static rank_type rank() noexcept { return m_rank; }
-  MDSPAN_INLINE_FUNCTION
   constexpr static rank_type rank_dynamic() noexcept { return m_rank_dynamic; }
 
-  MDSPAN_INLINE_FUNCTION
   constexpr index_type extent(rank_type r) const noexcept { return m_vals.value(r); }
-  MDSPAN_INLINE_FUNCTION
   constexpr static size_t static_extent(rank_type r) noexcept {
     return vals_t::static_value(r);
   }
 
   // [mdspan.extents.cons], constructors
-  MDSPAN_INLINE_FUNCTION_DEFAULTED
   constexpr extents() noexcept = default;
 
   // Construction from just dynamic or all values.
@@ -404,7 +374,6 @@ public:
           (is_nothrow_constructible_v<index_type, OtherIndexTypes> && ... ) &&
           (sizeof...(OtherIndexTypes) == m_rank ||
            sizeof...(OtherIndexTypes) == m_rank_dynamic)))
-  MDSPAN_INLINE_FUNCTION
   constexpr explicit extents(OtherIndexTypes... dynvals) noexcept
       : m_vals(static_cast<index_type>(dynvals)...) {}
 
@@ -415,7 +384,6 @@ public:
           is_convertible_v<OtherIndexType, index_type> &&
           is_nothrow_constructible_v<index_type, OtherIndexType> &&
           (N == m_rank || N == m_rank_dynamic)))
-  MDSPAN_INLINE_FUNCTION
   MDSPAN_CONDITIONAL_EXPLICIT(N != m_rank_dynamic)
   constexpr extents(const array<OtherIndexType, N> &exts) noexcept
       : m_vals(std::move(exts)) {}
@@ -426,7 +394,6 @@ public:
       ( is_convertible_v<OtherIndexType, index_type> &&
         is_nothrow_constructible_v<index_type, OtherIndexType> &&
        (N == m_rank || N == m_rank_dynamic)))
-  MDSPAN_INLINE_FUNCTION
   MDSPAN_CONDITIONAL_EXPLICIT(N != m_rank_dynamic)
   constexpr extents(const span<OtherIndexType, N> &exts) noexcept
       : m_vals(std::move(exts)) {}
@@ -439,7 +406,6 @@ private:
   MDSPAN_TEMPLATE_REQUIRES(
       size_t DynCount, size_t R, class OtherExtents, class... DynamicValues,
       /* requires */ ((R < m_rank) && (static_extent(R) == dynamic_extent)))
-  MDSPAN_INLINE_FUNCTION
   vals_t __construct_vals_from_extents(std::integral_constant<size_t, DynCount>,
                                        std::integral_constant<size_t, R>,
                                        const OtherExtents &exts,
@@ -453,7 +419,6 @@ private:
   MDSPAN_TEMPLATE_REQUIRES(
       size_t DynCount, size_t R, class OtherExtents, class... DynamicValues,
       /* requires */ ((R < m_rank) && (static_extent(R) != dynamic_extent)))
-  MDSPAN_INLINE_FUNCTION
   vals_t __construct_vals_from_extents(std::integral_constant<size_t, DynCount>,
                                        std::integral_constant<size_t, R>,
                                        const OtherExtents &exts,
@@ -466,7 +431,6 @@ private:
   MDSPAN_TEMPLATE_REQUIRES(
       size_t DynCount, size_t R, class OtherExtents, class... DynamicValues,
       /* requires */ ((R == m_rank) && (DynCount == m_rank_dynamic)))
-  MDSPAN_INLINE_FUNCTION
   vals_t __construct_vals_from_extents(std::integral_constant<size_t, DynCount>,
                                        std::integral_constant<size_t, R>,
                                        const OtherExtents &,
@@ -488,7 +452,6 @@ public:
                                                sizeof...(OtherExtents)>{},
               std::integer_sequence<size_t, Extents...>{},
               std::integer_sequence<size_t, OtherExtents...>{}))::value))
-  MDSPAN_INLINE_FUNCTION
   MDSPAN_CONDITIONAL_EXPLICIT((((Extents != dynamic_extent) &&
                                 (OtherExtents == dynamic_extent)) ||
                                ...) ||
@@ -501,7 +464,7 @@ public:
 
   // Comparison operator
   template <class OtherIndexType, size_t... OtherExtents>
-  MDSPAN_INLINE_FUNCTION friend constexpr bool
+  friend constexpr bool
   operator==(const extents &lhs,
              const extents<OtherIndexType, OtherExtents...> &rhs) noexcept {
     bool value = true;
@@ -511,7 +474,7 @@ public:
   }
 
   template <class OtherIndexType, size_t... OtherExtents>
-  MDSPAN_INLINE_FUNCTION friend constexpr bool
+  friend constexpr bool
   operator!=(extents const &lhs,
              extents<OtherIndexType, OtherExtents...> const &rhs) noexcept {
     return !(lhs == rhs);
