@@ -20,6 +20,7 @@
 #include <cassert>
 #include <vector>
 #include <type_traits>
+#include <ranges>
 
 namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 namespace MDSPAN_IMPL_PROPOSED_NAMESPACE {
@@ -390,6 +391,57 @@ MDSPAN_TEMPLATE_REQUIRES(
   MDSPAN_INLINE_FUNCTION
   constexpr mdarray(const mapping_type& map,  std::initializer_list<value_type> il, const Alloc& alloc)
     : map_(map), ctr_(il, alloc)
+  { 
+    assert(ctr_.size() >= map_.required_span_size());
+  }
+#endif
+#endif
+
+#ifdef MDARRAY_SUPPORT_RANGES
+  MDSPAN_TEMPLATE_REQUIRES(
+    std::ranges::input_range R,
+    /* requires */ (_MDSPAN_TRAIT( std::is_constructible, container_type, R) &&
+                    _MDSPAN_TRAIT( std::is_constructible, mapping_type, extents_type))
+  )
+  MDSPAN_INLINE_FUNCTION
+  constexpr mdarray(const extents_type& exts, R&& r)
+    : map_(exts), ctr_(r)
+  {
+    assert(ctr_.size() >= map_.required_span_size());
+  }
+
+  MDSPAN_TEMPLATE_REQUIRES(
+    std::ranges::input_range R,
+    /* requires */ (_MDSPAN_TRAIT( std::is_constructible, container_type, R))
+  )
+  MDSPAN_INLINE_FUNCTION
+  constexpr mdarray(const mapping_type& map,  R&& r)
+    : map_(map), ctr_(r)
+  { 
+    assert(ctr_.size() >= map_.required_span_size());
+  }
+
+#ifdef MDARRAY_SUPPORT_ALLOC
+  // Constructors for container types constructible from a size and allocator
+  MDSPAN_TEMPLATE_REQUIRES(
+    std::ranges::input_range R, class Alloc,
+    /* requires */ (_MDSPAN_TRAIT( std::is_constructible, container_type, R, Alloc) &&
+                    _MDSPAN_TRAIT( std::is_constructible, mapping_type, extents_type))
+  )
+  MDSPAN_INLINE_FUNCTION
+  constexpr mdarray(const extents_type& exts,  R&& r, const Alloc& alloc)
+    : map_(exts), ctr_(r, alloc)
+  {
+    assert(ctr_.size() >= map_.required_span_size());
+  }
+
+  MDSPAN_TEMPLATE_REQUIRES(
+    std::ranges::input_range R, class Alloc,
+    /* requires */ (_MDSPAN_TRAIT( std::is_constructible, container_type, R, Alloc))
+  )
+  MDSPAN_INLINE_FUNCTION
+  constexpr mdarray(const mapping_type& map,  R&& r, const Alloc& alloc)
+    : map_(map), ctr_(r, alloc)
   { 
     assert(ctr_.size() >= map_.required_span_size());
   }

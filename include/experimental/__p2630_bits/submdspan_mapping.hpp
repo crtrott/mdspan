@@ -20,6 +20,7 @@
 #include <type_traits>
 #include <tuple>
 #include <utility> // index_sequence
+#include "../__p2642_bits/layout_padded.hpp"
 
 namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 //******************************************
@@ -34,6 +35,23 @@ namespace detail {
 using detail::first_of;
 using detail::stride_of;
 using detail::inv_map_rank;
+
+template <size_t... _Values>
+struct static_partial_sums {
+  static constexpr std::array<size_t, sizeof...(_Values)> __static_partial_sums_impl() {
+    std::array<size_t, sizeof...(_Values)> __values{_Values...};
+    std::array<size_t, sizeof...(_Values)> __partial_sums{{}};
+    size_t __running_sum = 0;
+    for (int __i = 0; __i != sizeof...(_Values); ++__i) {
+      __running_sum += __values[__i];
+      __partial_sums[__i] = __running_sum;
+    }
+    return __partial_sums;
+  }
+  static constexpr std::array<size_t, sizeof...(_Values)> __result{__static_partial_sums_impl()};
+
+  static constexpr size_t get(size_t __index) { return __result[__index]; }
+};
 
 // constructs sub strides
 template <class SrcMapping, class... slice_strides, size_t... InvMapIdxs>
@@ -76,6 +94,31 @@ struct preserve_layout_left_mapping<std::index_sequence<Idx...>, SubRank,
 };
 } // namespace detail
 
+namespace detail {
+
+// Figure out whether to preserve layout_left
+template <class IndexSequence, size_t SubRank, class ScanSlices, class... SliceSpecifiers>
+struct preserve_layout_left_padded_mapping;
+
+template <class... SliceSpecifiers, size_t... Idx, class ScanSlices, size_t SubRank>
+struct preserve_layout_left_padded_mapping<std::index_sequence<Idx...>, SubRank, ScanSlices, SliceSpecifiers...> {
+  constexpr static size_t u = ((ScanSlices::get(Idx)==1?1:0) + ... ) - 1;
+  constexpr static bool value =
+      // Preserve layout for rank 0
+      (SubRank == 0) ||
+      (
+          // Slice specifiers up to subrank need to be full_extent_t - except
+          // for the last one which could also be tuple but not a strided index
+          // range slice specifiers after subrank are integrals
+          (
+           ((Idx == 0) && (std::is_same_v<SliceSpecifiers, full_extent_t> || std::is_convertible_v<SliceSpecifiers, std::tuple<size_t, size_t>>)) ||
+           (ScanSlices::get(Idx) < 2) ||
+           ((ScanSlices::get(Idx) < SubRank) && std::is_same_v<SliceSpecifiers, full_extent_t>) ||
+           (ScanSlices::get(Idx) == SubRank)
+          ) && ...);
+};
+} // namespace detail
+
 // Suppress spurious warning with NVCC about no return statement.
 // This is a known issue in NVCC and NVC++
 // Depending on the CUDA and GCC version we need both the builtin
@@ -111,14 +154,26 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(SliceSpecifiers... slices)
   constexpr bool preserve_layout = detail::preserve_layout_left_mapping<
       decltype(std::make_index_sequence<src_ext_t::rank()>()), dst_ext_t::rank(),
       SliceSpecifiers...>::value;
+  using layout_left_pad = detail::preserve_layout_left_padded_mapping<
+      decltype(std::make_index_sequence<src_ext_t::rank()>()), dst_ext_t::rank(),
+      detail::static_partial_sums<size_t(std::is_same_v<SliceSpecifiers,Kokkos::full_extent_t> ||
+                                         std::is_convertible_v<SliceSpecifiers, std::tuple<size_t, size_t>>)...>,
+      SliceSpecifiers...>;
+  constexpr bool can_use_layout_padded = layout_left_pad::value;
   using dst_layout_t =
-      std::conditional_t<preserve_layout, layout_left, layout_stride>;
+      std::conditional_t<preserve_layout, layout_left,
+         std::conditional_t<can_use_layout_padded, Experimental::layout_left_padded<dynamic_extent>, layout_stride>>;
   using dst_mapping_t = typename dst_layout_t::template mapping<dst_ext_t>;
 
   if constexpr (std::is_same_v<dst_layout_t, layout_left>) {
     // layout_left case
     return submdspan_mapping_result<dst_mapping_t>{
         dst_mapping_t(dst_ext),
+        static_cast<size_t>(this->operator()(detail::first_of(slices)...))};
+  } else if constexpr (std::is_same_v<dst_layout_t, Experimental::layout_left_padded<dynamic_extent>>) {
+    printf("u: %i\n",int(layout_left_pad::u)); 
+    return submdspan_mapping_result<dst_mapping_t>{
+        dst_mapping_t(dst_ext, stride(layout_left_pad::u+1)),
         static_cast<size_t>(this->operator()(detail::first_of(slices)...))};
   } else {
     // layout_stride case
@@ -153,6 +208,68 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(SliceSpecifiers... slices)
 #elif defined __NVCOMPILER
     #pragma    diagnostic pop
 #endif
+
+
+namespace Experimental {
+template <size_t PaddingValue>
+template <class Extents>
+template <class... SliceSpecifiers>
+MDSPAN_INLINE_FUNCTION
+constexpr auto
+layout_left_padded<PaddingValue>::mapping<Extents>::submdspan_mapping_impl(SliceSpecifiers... slices) const {
+
+  // compute sub extents
+  using src_ext_t = Extents;
+  auto dst_ext = submdspan_extents(extents(), slices...);
+  using dst_ext_t = decltype(dst_ext);
+
+  // figure out sub layout type
+  constexpr bool use_layout_left = (dst_ext_t::rank() < 2) && ::Kokkos::detail::preserve_layout_left_mapping<
+      decltype(std::make_index_sequence<src_ext_t::rank()>()), dst_ext_t::rank(),
+      SliceSpecifiers...>::value;
+  constexpr bool can_use_layout_padded = ::Kokkos::detail::preserve_layout_left_padded_mapping<
+      decltype(std::make_index_sequence<src_ext_t::rank()>()), dst_ext_t::rank(),
+      ::Kokkos::detail::static_partial_sums<size_t(std::is_same_v<SliceSpecifiers,Kokkos::full_extent_t> ||
+                                         std::is_convertible_v<SliceSpecifiers, std::tuple<size_t, size_t>>)...>,
+      SliceSpecifiers...>::value;
+  using dst_layout_t =
+      std::conditional_t<use_layout_left, layout_left,
+         std::conditional_t<can_use_layout_padded, Experimental::layout_left_padded<dynamic_extent>, layout_stride>>;
+  using dst_mapping_t = typename dst_layout_t::template mapping<dst_ext_t>;
+
+  if constexpr (std::is_same_v<dst_layout_t, layout_left>) {
+    // layout_left case
+    return submdspan_mapping_result<dst_mapping_t>{
+        dst_mapping_t(dst_ext),
+        static_cast<size_t>(this->operator()(::Kokkos::detail::first_of(slices)...))};
+  } else if constexpr (std::is_same_v<dst_layout_t, Experimental::layout_left_padded<dynamic_extent>>) { 
+    return submdspan_mapping_result<dst_mapping_t>{
+        dst_mapping_t(dst_ext, stride(1)),
+        static_cast<size_t>(this->operator()(::Kokkos::detail::first_of(slices)...))};
+  } else {
+    // layout_stride case
+    auto inv_map = ::Kokkos::detail::inv_map_rank(
+      std::integral_constant<size_t,0>(),
+      std::index_sequence<>(),
+      slices...);
+    return submdspan_mapping_result<dst_mapping_t>{
+        dst_mapping_t(dst_ext, ::Kokkos::detail::construct_sub_strides(
+                                   *this, inv_map,
+    // HIP needs deduction guides to have markups so we need to be explicit
+    // NVCC 11.0 has a bug with deduction guide here, tested that 11.2 does not have the issue
+    #if defined(_MDSPAN_HAS_HIP) || (defined(__NVCC__) && (__CUDACC_VER_MAJOR__ * 100 + __CUDACC_VER_MINOR__ * 10) < 1120)
+                                   std::tuple<decltype(::Kokkos::detail::stride_of(slices))...>{::Kokkos::detail::stride_of(slices)...})),
+    #else
+                                   std::tuple{::Kokkos::detail::stride_of(slices)...})),
+    #endif
+        static_cast<size_t>(this->operator()(::Kokkos::detail::first_of(slices)...))};
+  }
+#if defined(__NVCC__) && !defined(__CUDA_ARCH__) && defined(__GNUC__)
+  __builtin_unreachable();
+#endif
+}
+}
+
 
 //**********************************
 // layout_right submdspan_mapping
