@@ -182,6 +182,21 @@ struct deduce_layout_left_submapping<
   }
 };
 
+// We are reusing the same thing for layout_left and layout_left_padded
+// For layout_left as source StaticStride is static_extent(0)
+template<class Extents, size_t NumGaps, size_t StaticStride>
+struct Compute_S_static_layout_left {
+  // Neither StaticStride nor any of the looked for extents can zero.
+  // StaticStride never can be zero, the static_extents we are looking at are associated with 
+  // integral slice specifiers - which wouldn't be valid for zero extent
+  template<size_t ... Idx>
+  MDSPAN_INLINE_FUNCTION
+  static constexpr size_t value(std::index_sequence<Idx...>) {
+    size_t val = ((Idx>0 && Idx<=NumGaps ? (Extents::static_extent(Idx) == dynamic_extent?0:Extents::static_extent(Idx)) : 1) * ... * (StaticStride == dynamic_extent?0:StaticStride));
+    return val == 0?dynamic_extent:val;
+  }
+};
+
 } // namespace detail
 
 // Actual submdspan mapping call
@@ -202,14 +217,6 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(
       decltype(std::make_index_sequence<src_ext_t::rank()>()),
       SliceSpecifiers...>;
 
-  using dst_layout_t = std::conditional_t<
-      deduce_layout::layout_left_value(), layout_left,
-      std::conditional_t<
-          deduce_layout::layout_left_padded_value(),
-          MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<dynamic_extent>,
-          layout_stride>>;
-  using dst_mapping_t = typename dst_layout_t::template mapping<dst_ext_t>;
-
   // Figure out if any slice's lower bound equals the corresponding extent.
   // If so, bypass evaluating the layout mapping.  This fixes LWG Issue 4060.
   const bool out_of_bounds =
@@ -218,16 +225,18 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(
       out_of_bounds ? this->required_span_size()
                     : this->operator()(detail::first_of(slices)...));
 
-  if constexpr (std::is_same_v<dst_layout_t, layout_left>) {
+  if constexpr (deduce_layout::layout_left_value) {
     // layout_left case
+    using dst_mapping_t = typename layout_left::mapping<dst_ext_t>;
     return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t(dst_ext),
                                                    offset};
-  } else if constexpr (std::is_same_v<dst_layout_t,
-                                      MDSPAN_IMPL_PROPOSED_NAMESPACE::
-                                          layout_left_padded<dynamic_extent>>) {
+  } else if constexpr (deduce_layout::layout_left_padded_value) {
+    constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::NumGaps, Extents::static_extent(0)>::value(std::make_index_sequence<Extents::rank()>());
+    using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<S_static>::template mapping<dst_ext_t>;
     return submdspan_mapping_result<dst_mapping_t>{
         dst_mapping_t(dst_ext, stride(1 + deduce_layout::num_gaps)), offset};
   } else {
+    using dst_mapping_t = typename layout_stride::mapping<dst_ext_t>;
     // layout_stride case
     auto inv_map = detail::inv_map_rank(std::integral_constant<size_t, 0>(),
                                         std::index_sequence<>(), slices...);
@@ -303,7 +312,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
         using dst_mapping_t = typename layout_left::mapping<dst_ext_t>;
         return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t{dst_ext}, offset};
       } else if constexpr (deduce_layout::layout_left_padded_value) { // can keep layout_left_padded
-        constexpr size_t S_static = Compute_S_static<Extents, deduce_layout::NumGaps, static_padding_stride>::value(std::make_index_sequence<Extents::rank()>());
+        constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::NumGaps, static_padding_stride>::value(std::make_index_sequence<Extents::rank()>());
         using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<S_static>::template mapping<dst_ext_t>;
         return submdspan_mapping_result<dst_mapping_t>{
         dst_mapping_t(dst_ext, stride(1 + deduce_layout::NumGaps)), offset};
