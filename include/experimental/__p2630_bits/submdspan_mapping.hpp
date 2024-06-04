@@ -289,7 +289,8 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
   using dst_ext_t = decltype(dst_ext);
 
   if constexpr (Extents::rank() == 0) { // rank-0 case
-    return submdspan_mapping_result{*this, 0};
+    using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extents>;
+    return submdspan_mapping_result<dst_mapping_t>{*this, 0};
   } else {
     const bool out_of_bounds =
         MDSPAN_IMPL_STANDARD_NAMESPACE::detail::any_slice_out_of_bounds(this->extents(), slices...);
