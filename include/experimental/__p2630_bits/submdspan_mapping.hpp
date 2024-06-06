@@ -268,7 +268,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
     auto offset = static_cast<size_t>(
         out_of_bounds ? this->required_span_size()
                     : this->operator()(MDSPAN_IMPL_STANDARD_NAMESPACE::detail::first_of(slices)...));
-    if constexpr (Extents::rank() == 1 || dst_ext_t::rank() == 0) { // rank-1 or getting rank-0
+    if constexpr (dst_ext_t::rank() == 0) { // result rank-0
       using dst_mapping_t = typename layout_left::mapping<dst_ext_t>;
       return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t{dst_ext}, offset};
     } else { // general case
