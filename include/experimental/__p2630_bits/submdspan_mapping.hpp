@@ -227,7 +227,7 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(
 
   if constexpr (deduce_layout::layout_left_value) {
     // layout_left case
-    using dst_mapping_t = typename layout_left::mapping<dst_ext_t>;
+    using dst_mapping_t = typename layout_left::template mapping<dst_ext_t>;
     return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t(dst_ext),
                                                    offset};
   } else if constexpr (deduce_layout::layout_left_padded_value) {
@@ -289,7 +289,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
   using dst_ext_t = decltype(dst_ext);
 
   if constexpr (Extents::rank() == 0) { // rank-0 case
-    using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extents>;
+    using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::template mapping<Extents>;
     return submdspan_mapping_result<dst_mapping_t>{*this, 0};
   } else {
     const bool out_of_bounds =
@@ -298,7 +298,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
         out_of_bounds ? this->required_span_size()
                     : this->operator()(MDSPAN_IMPL_STANDARD_NAMESPACE::detail::first_of(slices)...));
     if constexpr (dst_ext_t::rank() == 0) { // result rank-0
-      using dst_mapping_t = typename layout_left::mapping<dst_ext_t>;
+      using dst_mapping_t = typename layout_left::template mapping<dst_ext_t>;
       return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t{dst_ext}, offset};
     } else { // general case
       // Figure out if any slice's lower bound equals the corresponding extent.
@@ -310,7 +310,7 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
         SliceSpecifiers...>;
 
       if constexpr (deduce_layout::layout_left_value && dst_ext_t::rank() == 1) { // getting rank-1 from leftmost
-        using dst_mapping_t = typename layout_left::mapping<dst_ext_t>;
+        using dst_mapping_t = typename layout_left::template mapping<dst_ext_t>;
         return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t{dst_ext}, offset};
       } else if constexpr (deduce_layout::layout_left_padded_value) { // can keep layout_left_padded
         constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::NumGaps, static_padding_stride>::value(std::make_index_sequence<Extents::rank()>());

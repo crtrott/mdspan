@@ -497,10 +497,12 @@ public:
 
    // [mdspan.submdspan.mapping], submdspan mapping specialization
    template<class... SliceSpecifiers>
+   MDSPAN_INLINE_FUNCTION
      constexpr auto submdspan_mapping_impl(
        SliceSpecifiers... slices) const;
 
    template<class... SliceSpecifiers>
+   MDSPAN_INLINE_FUNCTION
      friend constexpr auto submdspan_mapping(
        const mapping& src, SliceSpecifiers... slices) {
          return src.submdspan_mapping_impl(slices...);
