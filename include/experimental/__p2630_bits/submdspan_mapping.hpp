@@ -262,19 +262,6 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(
 #endif
 }
 
-template<class Extents, size_t NumGaps, size_t StaticStride>
-struct Compute_S_static {
-  // Neither StaticStride nor any of the looked for extents can zero.
-  // StaticStride never can be zero, the static_extents we are looking at are associated with 
-  // integral slice specifiers - which wouldn't be valid for zero extent
-  template<size_t ... Idx>
-  MDSPAN_INLINE_FUNCTION
-  static constexpr size_t value(std::index_sequence<Idx...>) {
-    size_t val = ((Idx>0 && Idx<=NumGaps ? (Extents::static_extent(Idx) == dynamic_extent?0:Extents::static_extent(Idx)) : 1) * ... * (StaticStride == dynamic_extent?0:StaticStride));
-      return val == 0?dynamic_extent:val;
-  }
-};
-
 // Actual submdspan mapping call
 template <size_t PaddingValue>
 template <class Extents>
