@@ -225,13 +225,13 @@ layout_left::mapping<Extents>::submdspan_mapping_impl(
       out_of_bounds ? this->required_span_size()
                     : this->operator()(detail::first_of(slices)...));
 
-  if constexpr (deduce_layout::layout_left_value) {
+  if constexpr (deduce_layout::layout_left_value()) {
     // layout_left case
     using dst_mapping_t = typename layout_left::template mapping<dst_ext_t>;
     return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t(dst_ext),
                                                    offset};
-  } else if constexpr (deduce_layout::layout_left_padded_value) {
-    constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::NumGaps, Extents::static_extent(0)>::value(std::make_index_sequence<Extents::rank()>());
+  } else if constexpr (deduce_layout::layout_left_padded_value()) {
+    constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::num_gaps, Extents::static_extent(0)>::value(std::make_index_sequence<Extents::rank()>());
     using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<S_static>::template mapping<dst_ext_t>;
     return submdspan_mapping_result<dst_mapping_t>{
         dst_mapping_t(dst_ext, stride(1 + deduce_layout::num_gaps)), offset};
@@ -296,14 +296,14 @@ MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<PaddingValue>::mapping<Extent
         decltype(std::make_index_sequence<src_ext_t::rank()>()),
         SliceSpecifiers...>;
 
-      if constexpr (deduce_layout::layout_left_value && dst_ext_t::rank() == 1) { // getting rank-1 from leftmost
+      if constexpr (deduce_layout::layout_left_value() && dst_ext_t::rank() == 1) { // getting rank-1 from leftmost
         using dst_mapping_t = typename layout_left::template mapping<dst_ext_t>;
         return submdspan_mapping_result<dst_mapping_t>{dst_mapping_t{dst_ext}, offset};
-      } else if constexpr (deduce_layout::layout_left_padded_value) { // can keep layout_left_padded
-        constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::NumGaps, static_padding_stride>::value(std::make_index_sequence<Extents::rank()>());
+      } else if constexpr (deduce_layout::layout_left_padded_value()) { // can keep layout_left_padded
+        constexpr size_t S_static = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::Compute_S_static_layout_left<Extents, deduce_layout::num_gaps, static_padding_stride>::value(std::make_index_sequence<Extents::rank()>());
         using dst_mapping_t = typename MDSPAN_IMPL_PROPOSED_NAMESPACE::layout_left_padded<S_static>::template mapping<dst_ext_t>;
         return submdspan_mapping_result<dst_mapping_t>{
-        dst_mapping_t(dst_ext, stride(1 + deduce_layout::NumGaps)), offset};
+        dst_mapping_t(dst_ext, stride(1 + deduce_layout::num_gaps)), offset};
       } else { // layout_stride
     auto inv_map = MDSPAN_IMPL_STANDARD_NAMESPACE::detail::inv_map_rank(std::integral_constant<size_t, 0>(),
                                         std::index_sequence<>(), slices...);
