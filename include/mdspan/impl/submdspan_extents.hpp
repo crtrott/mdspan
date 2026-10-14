@@ -7,7 +7,7 @@
 
 #include "constant_wrapper.hpp"
 #include "strided_slice.hpp"
-#include "../__p0009_bits/utility.hpp"
+#include "utility.hpp"
 
 namespace MDSPAN_IMPL_STANDARD_NAMESPACE {
 namespace detail {
