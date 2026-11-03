@@ -93,6 +93,7 @@ if(NOT CMAKE_CXX_STANDARD STREQUAL "14")
   mdspan_add_test(test_layout_padded_left ENABLE_PRECONDITIONS)
   mdspan_add_test(test_layout_padded_right ENABLE_PRECONDITIONS)
   mdspan_add_test(test_canonicalize_slices)
+  mdspan_add_test(test_shared_mdspan)
 endif()
 # both of those don't work yet since its using vector
 if(NOT MDSPAN_ENABLE_CUDA AND NOT MDSPAN_ENABLE_HIP)
